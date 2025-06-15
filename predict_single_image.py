@@ -9,10 +9,15 @@ from tensorflow.keras.preprocessing.image import img_to_array, load_img
 from tensorflow.keras.models import load_model
 import sys
 import os
+import json
+
+# 加载配置文件
+with open('config.json', 'r', encoding='utf-8') as f:
+    config = json.load(f)
 
 def load_pretrained_model():
     """加载预训练模型"""
-    model_path = 'model.h5'
+    model_path = config['model']['model_file']
     if not os.path.exists(model_path):
         print(f"❌ 模型文件 {model_path} 不存在!")
         return None
@@ -29,7 +34,7 @@ def preprocess_image(image_path):
         return None
     
     # 加载并调整图像尺寸 (与训练时一致)
-    img = load_img(image_path, target_size=(150, 150))
+    img = load_img(image_path, target_size=tuple(config['image_processing']['target_size']))
     img_array = img_to_array(img)
     
     # 归一化像素值 (与训练时一致)
@@ -55,7 +60,7 @@ def predict_trend(model, image_path):
     
     # 解释预测结果
     # 阈值0.5: >0.5为上升趋势, <0.5为下降趋势
-    if probability > 0.5:
+    if probability > config['model']['prediction_threshold']:
         trend = "📈 上升趋势 (uptrend)"
         confidence = probability
     else:
@@ -67,7 +72,7 @@ def predict_trend(model, image_path):
     print(f"原始概率值: {probability:.4f}")
     
     return {
-        'trend': 'uptrend' if probability > 0.5 else 'downtrend',
+        'trend': config['ui']['class_labels'][0] if probability > config['model']['prediction_threshold'] else config['ui']['class_labels'][1],
         'probability': probability,
         'confidence': confidence
     }
@@ -99,7 +104,7 @@ def batch_predict(model, image_folder):
     # 汇总结果
     print(f"\n📊 批量预测完成!")
     print("=" * 50)
-    uptrend_count = sum(1 for _, r in results if r['trend'] == 'uptrend')
+    uptrend_count = sum(1 for _, r in results if r['trend'] == config['ui']['class_labels'][0])
     downtrend_count = len(results) - uptrend_count
     
     print(f"上升趋势: {uptrend_count} 张")
@@ -122,8 +127,8 @@ def main():
         print(f"单张图像预测: python {sys.argv[0]} <图像路径>")
         print(f"批量预测: python {sys.argv[0]} <图像文件夹>")
         print("\n示例:")
-        print(f"python {sys.argv[0]} chart_images5_1/uptrend/uptrend_104.png")
-        print(f"python {sys.argv[0]} chart_images5_1/uptrend/")
+        print(f"python {sys.argv[0]} {config['image_processing']['chart_images_dir']}/{config['ui']['class_labels'][0]}/{config['ui']['class_labels'][0]}_104.png")
+        print(f"python {sys.argv[0]} {config['image_processing']['chart_images_dir']}/{config['ui']['class_labels'][0]}/")
         return
     
     target_path = sys.argv[1]

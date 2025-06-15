@@ -1,0 +1,126 @@
+{
+    "gpu": {
+        "memory_limit_mb": 7492,
+        "enable_memory_growth": false
+    },
+    "data": {
+        "test_data_file": "EURUSD_M15-test.csv",
+        "training_data_file": "EURUSD_M15.csv",
+        "delimiter": ",",
+        "time_column": "Time"
+    },
+    "time_window": {
+        "initial_time_index": 16500,
+        "final_time_index": 16800,
+        "window_size": 5,
+        "shift_size": 2
+    },
+    "model": {
+        "model_file": "model.h5",
+        "backup_model_file": "chart_classification_model.h5",
+        "prediction_threshold": 0.5,
+        "test_prediction_threshold": 0.7
+    },
+    "image_processing": {
+        "target_size": [150, 150],
+        "color_mode": "rgb",
+        "interpolation": "bilinear",
+        "rescale_factor": 0.00392156862745098,
+        "output_dir": "test_for_signal",
+        "chart_images_dir": "chart_images5_1",
+        "split_output_dir": "EURUSD_splitted_w5_s2"
+    },
+    "technical_indicators": {
+        "sma_period": 20,
+        "sma_color": "blue"
+    },
+    "chart_plotting": {
+        "chart_type": "candle",
+        "chart_style": "yahoo",
+        "figure_size": [14, 7],
+        "candle_width": 0.01,
+        "up_color": "green",
+        "down_color": "red",
+        "volume": true,
+        "axisoff": true,
+        "ylabel": "",
+        "date_format": "%Y-%m-%d,%H:%M",
+        "title": "Up/Down Trend Signals for EUR/USD",
+        "xlabel": "Date-Time",
+        "ylabel_final": "Price",
+        "grid": true,
+        "rotation": 60
+    },
+    "signal_annotation": {
+        "up_offset": -0.00032,
+        "down_offset": 0.00022,
+        "fontsize": 8,
+        "box_style": "round,pad=0.2",
+        "face_color": "yellow",
+        "alpha": 0.5,
+        "horizontal_alignment": "center",
+        "vertical_alignment": "bottom"
+    },
+    "trading": {
+        "initial_amount_usd": 1000,
+        "buy_signal": "U",
+        "sell_signal": "D"
+    },
+    "training": {
+        "input_folder": "chart_images5_1",
+        "output_folder": "EURUSD_splitted_w5_s2/",
+        "train_val_test_ratio": [0.7, 0.1, 0.2],
+        "random_seed": 1337,
+        "batch_size": 64,
+        "epochs": 20,
+        "learning_rate": 0.0003,
+        "dropout_rate": 0.5,
+        "data_augmentation": {
+            "shear_range": 0.2,
+            "zoom_range": 0.2
+        }
+    },
+    "model_architecture": {
+        "conv_filters": [32, 64, 128],
+        "conv_kernel_size": [3, 3],
+        "pool_size": [2, 2],
+        "dense_units": 512,
+        "activation": "relu",
+        "output_activation": "sigmoid",
+        "optimizer": "adam",
+        "loss": "binary_crossentropy",
+        "metrics": ["accuracy"]
+    },
+    "ui": {
+        "window_title": "Image Classification",
+        "window_size": "600x600",
+        "image_display_size": [300, 300],
+        "class_labels": ["uptrend", "downtrend"],
+        "font": ["Helvetica", 16]
+    },
+    "pattern_recognition": {
+        "use_patterns": true,
+        "pattern_functions": [
+            "CDL2CROWS", "CDL3BLACKCROWS", "CDL3INSIDE", "CDL3LINESTRIKE",
+            "CDL3OUTSIDE", "CDL3STARSINSOUTH", "CDL3WHITESOLDIERS",
+            "CDLABANDONEDBABY", "CDLADVANCEBLOCK", "CDLBELTHOLD",
+            "CDLBREAKAWAY", "CDLCLOSINGMARUBOZU", "CDLCONCEALBABYSWALL",
+            "CDLCOUNTERATTACK", "CDLDARKCLOUDCOVER", "CDLDOJI",
+            "CDLDOJISTAR", "CDLDRAGONFLYDOJI", "CDLENGULFING",
+            "CDLEVENINGDOJISTAR", "CDLEVENINGSTAR", "CDLGAPSIDESIDEWHITE",
+            "CDLGRAVESTONEDOJI", "CDLHAMMER", "CDLHANGINGMAN",
+            "CDLHARAMI", "CDLHARAMICROSS", "CDLHIGHWAVE",
+            "CDLHIKKAKE", "CDLHIKKAKEMOD", "CDLHOMINGPIGEON",
+            "CDLIDENTICAL3CROWS", "CDLINNECK", "CDLINVERTEDHAMMER",
+            "CDLKICKING", "CDLKICKINGBYLENGTH", "CDLLADDERBOTTOM",
+            "CDLLONGLEGGEDDOJI", "CDLLONGLINE", "CDLMARUBOZU",
+            "CDLMATCHINGLOW", "CDLMATHOLD", "CDLMORNINGDOJISTAR",
+            "CDLMORNINGSTAR", "CDLONNECK", "CDLPIERCING",
+            "CDLRICKSHAWMAN", "CDLRISEFALL3METHODS", "CDLSEPARATINGLINES",
+            "CDLSHOOTINGSTAR", "CDLSHORTLINE", "CDLSPINNINGTOP",
+            "CDLSTALLEDPATTERN", "CDLSTICKSANDWICH", "CDLTAKURI",
+            "CDLTASUKIGAP", "CDLTHRUSTING", "CDLTRISTAR",
+            "CDLUNIQUE3RIVER", "CDLUPSIDEGAP2CROWS", "CDLXSIDEGAP3METHODS"
+        ]
+    }
+} 

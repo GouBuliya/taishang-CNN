@@ -10,11 +10,16 @@ import pandas as pd
 import mplfinance as mpf
 import os
 import matplotlib.pyplot as plt
+import json
 
-dd = 'EURUSD_M15.csv'
-data = pd.read_csv(dd, delimiter='\t', index_col='Time', parse_dates=True)
+# 加载配置文件
+with open('config.json', 'r', encoding='utf-8') as f:
+    config = json.load(f)
 
-data['SMA'] = talib.SMA(data['Close'], timeperiod=20)
+dd = config['data']['training_data_file']
+data = pd.read_csv(dd, delimiter='\t', index_col=config['data']['time_column'], parse_dates=True)
+
+data['SMA'] = talib.SMA(data['Close'], timeperiod=config['technical_indicators']['sma_period'])
 
 pattern_funcs = [
     ("Two Crows", talib.CDL2CROWS),
@@ -80,15 +85,15 @@ pattern_funcs = [
     ("Upside/Downside Gap Three Methods", talib.CDLXSIDEGAP3METHODS)
 ]
 
-output_dir = "chart_images5_1"
+output_dir = config['image_processing']['chart_images_dir']
 os.makedirs(output_dir, exist_ok=True)
-uptrend_dir = os.path.join(output_dir, "uptrend")
-downtrend_dir = os.path.join(output_dir, "downtrend")
+uptrend_dir = os.path.join(output_dir, config['ui']['class_labels'][0])
+downtrend_dir = os.path.join(output_dir, config['ui']['class_labels'][1])
 os.makedirs(uptrend_dir, exist_ok=True)
 os.makedirs(downtrend_dir, exist_ok=True)
-window_size=5
-shift_size=2
-for i in range(0, len(data) - window_size,shift_size):
+window_size = config['time_window']['window_size']
+shift_size = config['time_window']['shift_size']
+for i in range(0, len(data) - window_size, shift_size):
     window = data.iloc[i:i+window_size]
     next_candle_close = data['Close'].iloc[i+window_size]
     last_candle_close = window['Close'].iloc[-1]
@@ -96,24 +101,25 @@ for i in range(0, len(data) - window_size,shift_size):
 
     pattern_detected = False
 
-    for name, func in pattern_funcs:
-        if func(window['Open'], window['High'], window['Low'], window['Close']).iloc[-1] != 0:
-            pattern_detected = True
-            break
-
+    if config['pattern_recognition']['use_patterns']:
+        for name, func in pattern_funcs:
+            if func(window['Open'], window['High'], window['Low'], window['Close']).iloc[-1] != 0:
+                pattern_detected = True
+                break
 
     if pattern_detected:
         if last_candle_close > sma_last :
-            label = 'uptrend'
+            label = config['ui']['class_labels'][0]
             save_path = os.path.join(uptrend_dir, f"{label}_{i}.png")
         elif last_candle_close < sma_last:
-            label = 'downtrend'
+            label = config['ui']['class_labels'][1]
             save_path = os.path.join(downtrend_dir, f"{label}_{i}.png")
         else:
             continue
 
-        ap = [mpf.make_addplot(window['SMA'], color='blue', secondary_y=False)]
-        mpf.plot(window, type='candle', style='yahoo', addplot=ap, volume=True, axisoff=True, ylabel='',
- savefig=save_path)
+        ap = [mpf.make_addplot(window['SMA'], color=config['technical_indicators']['sma_color'], secondary_y=False)]
+        mpf.plot(window, type=config['chart_plotting']['chart_type'], style=config['chart_plotting']['chart_style'], 
+                 addplot=ap, volume=config['chart_plotting']['volume'], axisoff=config['chart_plotting']['axisoff'], 
+                 ylabel=config['chart_plotting']['ylabel'], savefig=save_path)
         plt.close()
 

@@ -15,6 +15,11 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropou
 from keras import regularizers
 from keras.optimizers import Adam
 import tensorflow as tf
+import json
+
+# 加载配置文件
+with open('config.json', 'r', encoding='utf-8') as f:
+    config = json.load(f)
 
 gpus = tf.config.list_physical_devices('GPU')
 # if gpus: 
@@ -23,27 +28,28 @@ gpus = tf.config.list_physical_devices('GPU')
 if gpus: 
     tf.config.set_logical_device_configuration(
         gpus[0],
-        [tf.config.LogicalDeviceConfiguration(memory_limit=7492)]
+        [tf.config.LogicalDeviceConfiguration(memory_limit=config['gpu']['memory_limit_mb'])]
     )
 
 logical_gpus = tf.config.list_logical_devices('GPU')
 print(len(gpus), "Physical GPU,", len(logical_gpus), "Logical GPUs")
-input_folder = 'chart_images5_1'
-output_folder = 'EURUSD_splitted_w5_s2/'
+input_folder = config['training']['input_folder']
+output_folder = config['training']['output_folder']
 
 #Split with a ratio of Train:Val:Test = 60%:20%:20%
-splitfolders.ratio(input_folder, output=output_folder, seed=1337, ratio=(.7, .1, .2), group_prefix=None)  # Default values
+splitfolders.ratio(input_folder, output=output_folder, seed=config['training']['random_seed'], 
+                   ratio=tuple(config['training']['train_val_test_ratio']), group_prefix=None)  # Default values
 
-batch_size = 64
-img_height = 150
-img_width = 150
+batch_size = config['training']['batch_size']
+img_height = config['image_processing']['target_size'][0]
+img_width = config['image_processing']['target_size'][1]
 
 train_datagen = ImageDataGenerator(rescale=1./255,
                                # rotation_range=40,
                                # width_shift_range=0.2,
                                 #height_shift_range=0.2,
-                                shear_range=0.2,
-                                zoom_range=0.2)
+                                shear_range=config['training']['data_augmentation']['shear_range'],
+                                zoom_range=config['training']['data_augmentation']['zoom_range'])
 
 test_val_datagen = ImageDataGenerator(rescale=1./255)
 
@@ -52,14 +58,14 @@ train_generator = train_datagen.flow_from_directory(
     target_size=(img_height, img_width),
     batch_size=batch_size,
     class_mode='binary',
-    interpolation='bilinear')
+    interpolation=config['image_processing']['interpolation'])
 
 validation_generator = test_val_datagen.flow_from_directory(
     output_folder + 'val/',
     target_size=(img_height, img_width),
     batch_size=batch_size,
     class_mode='binary',
-    interpolation='bilinear',
+    interpolation=config['image_processing']['interpolation'],
     shuffle=False)
 
 test_generator = test_val_datagen.flow_from_directory(
@@ -67,29 +73,34 @@ test_generator = test_val_datagen.flow_from_directory(
     target_size=(img_height, img_width),
     batch_size=batch_size,
     class_mode='binary',
-    interpolation='bilinear',
+    interpolation=config['image_processing']['interpolation'],
     shuffle=False)
 
 model = Sequential([
     Input(shape=(img_height, img_width, 3)),
-    Conv2D(32, (3, 3), activation='relu'), 
-    MaxPooling2D(2, 2),
-    Conv2D(64, (3, 3), activation='relu'),
-    MaxPooling2D(2, 2),
-    Conv2D(128, (3, 3), activation='relu'),
+    Conv2D(config['model_architecture']['conv_filters'][0], tuple(config['model_architecture']['conv_kernel_size']), 
+           activation=config['model_architecture']['activation']), 
+    MaxPooling2D(tuple(config['model_architecture']['pool_size'])),
+    Conv2D(config['model_architecture']['conv_filters'][1], tuple(config['model_architecture']['conv_kernel_size']), 
+           activation=config['model_architecture']['activation']),
+    MaxPooling2D(tuple(config['model_architecture']['pool_size'])),
+    Conv2D(config['model_architecture']['conv_filters'][2], tuple(config['model_architecture']['conv_kernel_size']), 
+           activation=config['model_architecture']['activation']),
     MaxPooling2D(),
     Flatten(),
-    Dense(512, activation='relu'),
-    Dropout(0.5),
-    Dense(1, activation='sigmoid')
+    Dense(config['model_architecture']['dense_units'], activation=config['model_architecture']['activation']),
+    Dropout(config['training']['dropout_rate']),
+    Dense(1, activation=config['model_architecture']['output_activation'])
 ])
 model.summary()
 
-model.compile(optimizer=Adam(learning_rate=0.0003), loss='binary_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=Adam(learning_rate=config['training']['learning_rate']), 
+              loss=config['model_architecture']['loss'], 
+              metrics=config['model_architecture']['metrics'])
 
 history = model.fit(
     train_generator,
-    epochs=20,
+    epochs=config['training']['epochs'],
     validation_data=validation_generator)
 
 
@@ -121,7 +132,7 @@ print(f"Test Loss: {eval_result[0]}, Test Accuracy: {eval_result[1]}")
 
 test_generator.reset()
 predictions = model.predict(test_generator)
-predicted_classes = np.where(predictions > 0.5, 1, 0)
+predicted_classes = np.where(predictions > config['model']['prediction_threshold'], 1, 0)
 true_classes = test_generator.classes
 true_classes = true_classes[:len(predicted_classes)]
 
@@ -148,4 +159,4 @@ plt.ylabel('True Positive Rate')
 plt.title('Receiver Operating Characteristic')
 plt.legend(loc="lower right")
 plt.show()
-model.save("chart_classification_model.h5")
+model.save(config['model']['backup_model_file'])

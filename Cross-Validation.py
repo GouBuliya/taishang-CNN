@@ -13,9 +13,14 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropou
 from tensorflow.keras.optimizers import Adam
 from sklearn.model_selection import KFold
 from sklearn.metrics import classification_report, confusion_matrix
+import json
+
+# 加载配置文件
+with open('config.json', 'r', encoding='utf-8') as f:
+    config = json.load(f)
 
 # Define the path to your dataset
-dataset_path = 'C:/Users/PIXEL/Desktop/test/C_i5_2/chart_images5_2/'  # Change this to the path where your data is stored
+dataset_path = config['image_processing']['chart_images_dir'] + '/'  # Change this to the path where your data is stored
 # Initialize the ImageDataGenerator
 datagen = ImageDataGenerator(rescale=1./255)
 
@@ -23,20 +28,21 @@ datagen = ImageDataGenerator(rescale=1./255)
 def load_images(data_path):
     generator = datagen.flow_from_directory(
         data_path,
-        target_size=(150, 150),
-        batch_size=32,
+        target_size=tuple(config['image_processing']['target_size']),
+        batch_size=config['training']['batch_size'],
         class_mode='binary',  
         shuffle=True
     )
     num_samples = generator.samples
-    images = np.zeros((num_samples, 150, 150, 3))
+    images = np.zeros((num_samples, config['image_processing']['target_size'][0], 
+                      config['image_processing']['target_size'][1], 3))
     labels = np.zeros((num_samples,))
     i = 0
     for x_batch, y_batch in generator:
-        images[i * 32:(i + 1) * 32] = x_batch
-        labels[i * 32:(i + 1) * 32] = y_batch
+        images[i * config['training']['batch_size']:(i + 1) * config['training']['batch_size']] = x_batch
+        labels[i * config['training']['batch_size']:(i + 1) * config['training']['batch_size']] = y_batch
         i += 1
-        if i >= num_samples / 32:
+        if i >= num_samples / config['training']['batch_size']:
             break
     return images, labels
 
@@ -45,19 +51,31 @@ X, y = load_images(dataset_path)
 # Define the CNN model
 def create_model():
     model = Sequential([
-        Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)),
-        MaxPooling2D(2, 2),
-        Conv2D(64, (3, 3), activation='relu'),
-        MaxPooling2D(2, 2),
-        Conv2D(128, (3, 3), activation='relu'),
-        MaxPooling2D(2, 2),
+        Conv2D(config['model_architecture']['conv_filters'][0], 
+               tuple(config['model_architecture']['conv_kernel_size']), 
+               activation=config['model_architecture']['activation'], 
+               input_shape=(config['image_processing']['target_size'][0], 
+                           config['image_processing']['target_size'][1], 3)),
+        MaxPooling2D(tuple(config['model_architecture']['pool_size'])),
+        Conv2D(config['model_architecture']['conv_filters'][1], 
+               tuple(config['model_architecture']['conv_kernel_size']), 
+               activation=config['model_architecture']['activation']),
+        MaxPooling2D(tuple(config['model_architecture']['pool_size'])),
+        Conv2D(config['model_architecture']['conv_filters'][2], 
+               tuple(config['model_architecture']['conv_kernel_size']), 
+               activation=config['model_architecture']['activation']),
+        MaxPooling2D(tuple(config['model_architecture']['pool_size'])),
         Flatten(),
-        Dense(512, activation='relu'),
-        Dropout(0.5),
-        Dense(1, activation='sigmoid')  
+        Dense(config['model_architecture']['dense_units'], 
+              activation=config['model_architecture']['activation']),
+        Dropout(config['training']['dropout_rate']),
+        Dense(1, activation=config['model_architecture']['output_activation'])  
     ])
-    model.compile(optimizer=Adam(), loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer=Adam(learning_rate=config['training']['learning_rate']), 
+                  loss=config['model_architecture']['loss'], 
+                  metrics=config['model_architecture']['metrics'])
     return model
+
 # K-fold Cross-Validation setup
 kf = KFold(n_splits=5, shuffle=True, random_state=42)
 acc_per_fold = []
@@ -75,7 +93,7 @@ for train_index, test_index in kf.split(X):
     history = model.fit(
         X_train, y_train,
         validation_data=(X_test, y_test),
-        epochs=10,
+        epochs=config['training']['epochs'],
         verbose=2
     )
     histories.append(history)

@@ -11,28 +11,33 @@ from PIL import Image, ImageTk
 import numpy as np
 from tensorflow.keras.preprocessing.image import img_to_array, load_img
 from tensorflow.keras.models import load_model
+import json
+
+# 加载配置文件
+with open('config.json', 'r', encoding='utf-8') as f:
+    config = json.load(f)
 
 # Load the trained model
-，model = load_model('model.h5')
+model = load_model(config['model']['model_file'])
 
 # Define the image dimensions 
-img_height = 150
-img_width = 150
+img_height = config['image_processing']['target_size'][0]
+img_width = config['image_processing']['target_size'][1]
 
  # Replace class names
-class_labels = ['uptrend', 'downtrend'] 
+class_labels = config['ui']['class_labels'] 
 
 # Create the main window
 root = tk.Tk()
-root.title("Image Classification")
+root.title(config['ui']['window_title'])
 
 # Set window size
-root.geometry("600x600")
+root.geometry(config['ui']['window_size'])
 
 image_label = tk.Label(root)
 image_label.pack(pady=20)
 
-result_label = tk.Label(root, text="", font=("Helvetica", 16))
+result_label = tk.Label(root, text="", font=tuple(config['ui']['font']))
 result_label.pack()
 
 def preprocess_image(image_path):
@@ -54,12 +59,12 @@ def classify_image():
             processed_image = preprocess_image(file_path)
             
             prediction = model.predict(processed_image)
-            predicted_class = np.where(prediction > 0.7, 1, 0)
+            predicted_class = np.where(prediction > config['model']['test_prediction_threshold'], 1, 0)
             
             predicted_label = class_labels[predicted_class[0][0]]
             
             img = Image.open(file_path)
-            img = img.resize((300, 300))
+            img = img.resize(tuple(config['ui']['image_display_size']))
             img_tk = ImageTk.PhotoImage(img)
             image_label.configure(image=img_tk)
             image_label.image = img_tk 

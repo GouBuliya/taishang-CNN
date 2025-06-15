@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Sun Nov 10 16:00:00 2024
@@ -41,7 +40,7 @@ if gpus:
 logical_gpus = tf.config.list_logical_devices('GPU')
 print(len(gpus), "Physical GPU,", len(logical_gpus), "Logical GPUs")
 
-dd = '/home/hakan/Desktop/Edrees/EURUSD_M15-test.csv'
+dd = 'EURUSD_M15-test.csv'
 firstDate="2024-03-01 20:45:00"
 lastDate="2024-10-31 20:45:00"
 
@@ -89,7 +88,7 @@ for name in os.listdir(dataset_path):
     image1 = image1 / 255
     X.append(image1)
 X=np.array(X) 
-model=load_model("chart_classification_model_W5.h5")
+model=load_model("model.h5")
 predictions = model.predict(X)
 
 image_names=os.listdir(dataset_path)
